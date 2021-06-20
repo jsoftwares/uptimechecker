@@ -2,12 +2,15 @@
  * Entry point for API
  */
 
+// Dependencies
 const http = require('http');
 const https = require('https');
 const url = require('url');
 const fs = require('fs');
 const StringDecoder = require('string_decoder').StringDecoder;
-const config = require('./config');
+const config = require('./lib/config');
+const handlers = require('./lib/handlers');
+
 
 // Instantiating HTTP server
 const httpServer = http.createServer( (req, res) => {
@@ -32,6 +35,7 @@ httpsServer.listen(config.httpsPort, () => console.log('Server is listening on p
 
 // All server logic for both https and http
 const unifiedServer = (req, res) => {
+
     // Get URL and parse it. parsedUrl is an object
     const parsedUrl = url.parse(req.url, true); //true tell URL to throw its query-string operations through d query-string module of node so that d query string that comes back here is treated same as though we call the query-string ourself
     
@@ -51,7 +55,7 @@ const unifiedServer = (req, res) => {
     // Get payload, if any: (using string_decoder inbuilt module)
     /**We read incoming payload in streams(pieces). As d data is streaming in, d REQ object emits d DATA event 
      * anytime it receives a little piece, & it sends a bunch of undecoded data which we recieve as ARG to the callback
-     * then we decode it to UTF8 using the UTF8 decoded that we instantiated, since we know it should be UTF8   */
+     * where we decode it to UTF8 using the UTF8 decoded that we instantiated, since we know it should be UTF8   */
     const decoder = new StringDecoder('utf-8'); //arg tell StringDecoder d kind of string you want to decode.
     var buffer = '';
     req.on('data', (data) => {
@@ -72,7 +76,7 @@ const unifiedServer = (req, res) => {
             path,
             method,
             queryStringObject,
-            payload: buffer
+            payload: helpers.parseJsonToObject(buffer) //helper ensure d payload coming to handler isn't just raw buffer but d parsed json data
         };
     
         // Route the request to the handler specfied in the router
@@ -102,18 +106,10 @@ const unifiedServer = (req, res) => {
     
 }
 
-const handlers = {};
 
-handlers.ping = (data, callback) => {
-    // 
-    callback(200);
-}
-
-handlers.notFound = (data, callback) => {
-    callback(404);
-}
 
 // Define requests router
 const router = {
-    'ping': handlers.ping
+    'ping': handlers.ping,
+    'users': handlers.users
 };
